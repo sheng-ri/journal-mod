@@ -11,8 +11,6 @@ import top.birthcat.journalmod.JournalMod;
 
 import java.util.List;
 
-import static top.birthcat.journalmod.cmmon.AttachmentTypes.ATT_PAGES;
-
 /**
  * base on {@link net.minecraft.network.protocol.game.ServerboundEditBookPacket}
  */
@@ -35,8 +33,7 @@ public record JournalEditPacket(List<String> pages) implements CustomPacketPaylo
         return TYPE;
     }
 
-
     public void handleOnServer(IPayloadContext ctx) {
-        ctx.player().setData(ATT_PAGES, this.pages);
+        AttachmentTypes.setPage(ctx.player(),this.pages);
     }
 }

@@ -47,14 +47,14 @@ neoForge {
 
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-            jvmArgument("-Xmx1.5G")
+            jvmArgument("-Xmx1G")
         }
 
         server {
             server()
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-            jvmArgument("-Xmx1.5G")
+            jvmArgument("-Xmx1G")
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.

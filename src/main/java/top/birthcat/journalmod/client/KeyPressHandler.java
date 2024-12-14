@@ -7,7 +7,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
-import static top.birthcat.journalmod.client.ClientSetupHandler.EXAMPLE_MAPPING;
+import static top.birthcat.journalmod.client.ClientSetupHandler.OPEN_MAP;
 import static top.birthcat.journalmod.cmmon.AttachmentTypes.ATT_PAGES;
 
 @OnlyIn(Dist.CLIENT)
@@ -16,7 +16,7 @@ public class KeyPressHandler {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        if (!EXAMPLE_MAPPING.get().consumeClick()) {
+        if (!OPEN_MAP.get().consumeClick()) {
             return;
         }
             var mc = Minecraft.getInstance();

@@ -14,7 +14,7 @@ import static top.birthcat.journalmod.JournalMod.MODID;
 @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientSetupHandler {
 
-    public static final Lazy<KeyMapping> EXAMPLE_MAPPING = Lazy.of(() -> new KeyMapping(
+    public static final Lazy<KeyMapping> OPEN_MAP = Lazy.of(() -> new KeyMapping(
             "key.journalmod.open", // Will be localized using this translation key
             InputConstants.Type.KEYSYM, // Default mapping is on the keyboard
             GLFW.GLFW_KEY_P, // Default key is P
@@ -23,7 +23,7 @@ public class ClientSetupHandler {
 
     @SubscribeEvent
     public static void registerBindings(RegisterKeyMappingsEvent event) {
-        event.register(EXAMPLE_MAPPING.get());
+        event.register(OPEN_MAP.get());
     }
 
 }
