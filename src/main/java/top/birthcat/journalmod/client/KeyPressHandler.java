@@ -13,7 +13,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 import static top.birthcat.journalmod.client.ClientSetupHandler.OPEN_MAP;
-import static top.birthcat.journalmod.cmmon.AttachmentTypes.ATT_PAGES;
 
 @OnlyIn(Dist.CLIENT)
 @EventBusSubscriber
@@ -24,10 +23,10 @@ public class KeyPressHandler {
         if (!OPEN_MAP.get().consumeClick()) {
             return;
         }
-            var mc = Minecraft.getInstance();
-            var player = mc.player;
-            var pages = player.getData(ATT_PAGES);
-            var editScreen = new JournalEditScreen(player, pages);
-            mc.setScreen(editScreen);
+        var mc = Minecraft.getInstance();
+        var player = mc.player;
+        @SuppressWarnings("DataFlowIssue")
+        var editScreen = new JournalEditScreen(player, ClientJournalHolder.getJournalData());
+        mc.setScreen(editScreen);
     }
 }

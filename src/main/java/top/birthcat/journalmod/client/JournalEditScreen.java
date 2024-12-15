@@ -35,7 +35,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
-import top.birthcat.journalmod.cmmon.AttachmentTypes;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -191,7 +190,7 @@ public class JournalEditScreen extends Screen {
     private void saveChanges() {
         if (this.isModified) {
             this.eraseEmptyTrailingPages();
-            AttachmentTypes.setPage(owner,pages);
+            ClientJournalHolder.setJournal(pages);
         }
     }
 

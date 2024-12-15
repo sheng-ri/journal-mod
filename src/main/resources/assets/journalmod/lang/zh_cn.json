@@ -1,5 +1,6 @@
 {
   "key.journalmod.open": "打开日志界面",
   "book.journalmod.transcription": "抄录",
-  "book.journalmod.default.content": "欢迎第一次使用日志！"
+  "book.journalmod.default.content": "欢迎第一次使用日志！",
+  "book.journalmod.load": "加载日志..."
 }
