@@ -16,8 +16,6 @@ import top.birthcat.journalmod.common.CommonSetupHandler;
 public class JournalMod {
     // Define mod id in a common place for everything to reference
     public static final String MODID = "journalmod";
-    // Directly reference a slf4j logger
-    private static final Logger LOGGER = LogUtils.getLogger();
 
     public JournalMod(IEventBus modEventBus, ModContainer modContainer) {
         CommonSetupHandler.onModInit(modEventBus);

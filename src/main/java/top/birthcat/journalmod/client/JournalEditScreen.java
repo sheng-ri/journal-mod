@@ -53,7 +53,6 @@ public class JournalEditScreen extends Screen {
     private static final int IMAGE_HEIGHT = 192;
     private static final int BACKGROUND_TEXTURE_WIDTH = 256;
     private static final int BACKGROUND_TEXTURE_HEIGHT = 256;
-    private final Player owner;
     /**
      * Whether the book's title or contents has been modified since being opened
      */
@@ -87,7 +86,6 @@ public class JournalEditScreen extends Screen {
 
     public JournalEditScreen(Player owner, List<String> pages) {
         super(GameNarrator.NO_TITLE);
-        this.owner = owner;
 
         var mainHandItem = owner.getItemInHand(InteractionHand.MAIN_HAND);
         var writablebookcontent = mainHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
