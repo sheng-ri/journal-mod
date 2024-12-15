@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) BirthCat
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package top.birthcat.journalmod.client;
 
 import net.minecraft.client.Minecraft;

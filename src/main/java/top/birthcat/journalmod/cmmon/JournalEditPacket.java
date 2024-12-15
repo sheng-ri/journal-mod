@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) BirthCat
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package top.birthcat.journalmod.cmmon;
 
 import io.netty.buffer.ByteBuf;

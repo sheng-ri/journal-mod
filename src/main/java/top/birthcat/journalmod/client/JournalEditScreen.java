@@ -1,9 +1,13 @@
+/*
+ * Copyright (c) BirthCat
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package top.birthcat.journalmod.client;
 
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.client.StringSplitter;
@@ -21,7 +25,6 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.network.Filterable;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.StringUtil;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -51,10 +54,6 @@ public class JournalEditScreen extends Screen {
     private static final int IMAGE_HEIGHT = 192;
     private static final int BACKGROUND_TEXTURE_WIDTH = 256;
     private static final int BACKGROUND_TEXTURE_HEIGHT = 256;
-    private static final Component EDIT_TITLE_LABEL = Component.translatable("book.editTitle");
-    private static final Component FINALIZE_WARNING_LABEL = Component.translatable("book.finalizeWarning");
-    private static final FormattedCharSequence BLACK_CURSOR = FormattedCharSequence.forward("_", Style.EMPTY.withColor(ChatFormatting.BLACK));
-    private static final FormattedCharSequence GRAY_CURSOR = FormattedCharSequence.forward("_", Style.EMPTY.withColor(ChatFormatting.GRAY));
     private final Player owner;
     /**
      * Whether the book's title or contents has been modified since being opened
@@ -66,16 +65,12 @@ public class JournalEditScreen extends Screen {
     private int frameTick;
     private int currentPage;
     private final List<String> pages = Lists.newArrayList();
-    private String title = "";
     private final TextFieldHelper pageEdit = new TextFieldHelper(
             this::getCurrentPageText,
             this::setCurrentPageText,
             this::getClipboard,
             this::setClipboard,
-            p_280853_ -> p_280853_.length() < 1024 && this.font.wordWrapHeight(p_280853_, 114) <= 128
-    );
-    private final TextFieldHelper titleEdit = new TextFieldHelper(
-            () -> this.title, p_98175_ -> this.title = p_98175_, this::getClipboard, this::setClipboard, p_98170_ -> p_98170_.length() < 16
+            p_280853_ -> p_280853_.length() < 1024 && this.font.wordWrapHeight(p_280853_, TEXT_WIDTH) <= TEXT_HEIGHT
     );
     /**
      * In milliseconds
@@ -142,13 +137,12 @@ public class JournalEditScreen extends Screen {
             this.minecraft.setScreen(null);
             this.saveChanges();
         }).bounds(this.width / 2 + 2, 196, 98, 20).build());
-        this.writeButton = this.addRenderableWidget(Button.builder(Component.translatable("book.journalmod.write"), p_98177_ -> {
+        this.writeButton = this.addRenderableWidget(Button.builder(Component.translatable("book.journalmod.transcription"), p_98177_ -> {
             this.minecraft.setScreen(null);
             this.saveChanges();
             this.writeToBook();
         }).bounds(this.width / 2 - 100, 196, 98, 20).build());
-        int i = (this.width - 192) / 2;
-        int j = 2;
+        int i = (this.width - IMAGE_WIDTH) / 2;
         this.forwardButton = this.addRenderableWidget(new PageButton(i + 116, 159, true, p_98144_ -> this.pageForward(), true));
         this.backButton = this.addRenderableWidget(new PageButton(i + 43, 159, false, p_98113_ -> this.pageBack(), true));
         this.updateButtonVisibility();
@@ -341,19 +335,6 @@ public class JournalEditScreen extends Screen {
         }
     }
 
-    /**
-     * Handles special keys pressed while editing the book's title
-     */
-    private boolean titleKeyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 259) {
-            this.titleEdit.removeCharsFromCursor(-1);
-            this.updateButtonVisibility();
-            this.isModified = true;
-            return true;
-        }
-        return false;
-    }
-
     private String getCurrentPageText() {
         return this.currentPage >= 0 && this.currentPage < this.pages.size() ? this.pages.get(this.currentPage) : "";
     }
@@ -370,10 +351,9 @@ public class JournalEditScreen extends Screen {
     public void render(GuiGraphics p_281724_, int p_282965_, int p_283294_, float p_281293_) {
         super.render(p_281724_, p_282965_, p_283294_, p_281293_);
         this.setFocused(null);
-        int i = (this.width - 192) / 2;
-        int j = 2;
+        int i = (this.width - IMAGE_WIDTH) / 2;
         int j1 = this.font.width(this.pageMsg);
-        p_281724_.drawString(this.font, this.pageMsg, i - j1 + 192 - 44, 18, 0, false);
+        p_281724_.drawString(this.font, this.pageMsg, i - j1 + IMAGE_WIDTH - 44, 18, 0, false);
         DisplayCache bookeditscreen$displaycache = this.getDisplayCache();
 
         for (LineInfo bookeditscreen$lineinfo : bookeditscreen$displaycache.lines) {
@@ -387,7 +367,7 @@ public class JournalEditScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics p_294860_, int p_295019_, int p_294307_, float p_295562_) {
         this.renderTransparentBackground(p_294860_);
-        p_294860_.blit(RenderType::guiTextured, BookViewScreen.BOOK_LOCATION, (this.width - 192) / 2, 2, 0.0F, 0.0F, 192, 192, 256, 256);
+        p_294860_.blit(RenderType::guiTextured, BookViewScreen.BOOK_LOCATION, (this.width - IMAGE_WIDTH) / 2, 2, 0.0F, 0.0F, IMAGE_WIDTH, IMAGE_HEIGHT, BACKGROUND_TEXTURE_WIDTH, BACKGROUND_TEXTURE_HEIGHT);
     }
 
     private void renderCursor(GuiGraphics guiGraphics, Pos2i cursorPos, boolean isEndOfText) {
@@ -412,11 +392,11 @@ public class JournalEditScreen extends Screen {
     }
 
     private Pos2i convertScreenToLocal(Pos2i screenPos) {
-        return new Pos2i(screenPos.x - (this.width - 192) / 2 - 36, screenPos.y - 32);
+        return new Pos2i(screenPos.x - (this.width - IMAGE_WIDTH) / 2 - 36, screenPos.y - 32);
     }
 
     private Pos2i convertLocalToScreen(Pos2i localScreenPos) {
-        return new Pos2i(localScreenPos.x + (this.width - 192) / 2 + 36, localScreenPos.y + 32);
+        return new Pos2i(localScreenPos.x + (this.width - IMAGE_WIDTH) / 2 + 36, localScreenPos.y + 32);
     }
 
     @Override
@@ -503,7 +483,7 @@ public class JournalEditScreen extends Screen {
             MutableInt mutableint = new MutableInt();
             MutableBoolean mutableboolean = new MutableBoolean();
             StringSplitter stringsplitter = this.font.getSplitter();
-            stringsplitter.splitLines(s, 114, Style.EMPTY, true, (p_98132_, p_98133_, p_98134_) -> {
+            stringsplitter.splitLines(s, TEXT_WIDTH, Style.EMPTY, true, (p_98132_, p_98133_, p_98134_) -> {
                 int k3 = mutableint.getAndIncrement();
                 String s2 = s.substring(p_98133_, p_98134_);
                 mutableboolean.setValue(s2.endsWith("\n"));

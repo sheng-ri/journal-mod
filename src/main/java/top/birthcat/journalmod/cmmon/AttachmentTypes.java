@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) BirthCat
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package top.birthcat.journalmod.cmmon;
 
 import com.mojang.serialization.Codec;
@@ -20,8 +25,8 @@ public class AttachmentTypes {
 
     public static DeferredRegister<AttachmentType<?>> MOD_ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, JournalMod.MODID);
-
-    public static final Supplier<AttachmentType<List<String>>> ATT_PAGES = MOD_ATTACHMENT_TYPES.register(
+    public static final Supplier<AttachmentType<List<String>>> ATT_PAGES =
+            MOD_ATTACHMENT_TYPES.register(
             "journal", () -> AttachmentType.builder(() -> JournalMod.defaultContent)
                     .serialize(Codec.list(Codec.string(0, MAX_LEN_PER_PAGE), 0, MAX_PAGES))
                     .copyOnDeath()
