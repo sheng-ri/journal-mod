@@ -18,18 +18,21 @@ import java.util.List;
 
 /**
  * base on {@link net.minecraft.network.protocol.game.ServerboundEditBookPacket}
+ * but is bidirectional.
  */
-public record JournalEditPacket(List<String> pages) implements CustomPacketPayload {
+public record JournalDataPacket(
+        List<String> pages
+) implements CustomPacketPayload {
 
     public static final int MAX_LEN_PER_PAGE = 1024;
     public static final int MAX_PAGES = 100;
 
-    public static final CustomPacketPayload.Type<JournalEditPacket> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(JournalMod.MODID, "journal_edit_packet"));
+    public static final CustomPacketPayload.Type<JournalDataPacket> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(JournalMod.MODID, "journal_edit_packet"));
 
-    public static final StreamCodec<ByteBuf, JournalEditPacket> STREAM_CODEC = StreamCodec.composite(
+    public static final StreamCodec<ByteBuf, JournalDataPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.stringUtf8(MAX_LEN_PER_PAGE).apply(ByteBufCodecs.list(MAX_PAGES)),
-            JournalEditPacket::pages,
-            JournalEditPacket::new
+            JournalDataPacket::pages,
+            JournalDataPacket::new
     );
 
     @Override
@@ -38,7 +41,4 @@ public record JournalEditPacket(List<String> pages) implements CustomPacketPaylo
         return TYPE;
     }
 
-    public void handleOnServer(IPayloadContext ctx) {
-        AttachmentTypes.setPage(ctx.player(),this.pages);
-    }
 }

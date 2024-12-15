@@ -1,4 +1,5 @@
 {
   "key.journalmod.open": "Open the journal",
-  "book.journalmod.transcription": "Transcription"
+  "book.journalmod.transcription": "Transcription",
+  "book.journalmod.default.content": "Welcome to journal!"
 }
