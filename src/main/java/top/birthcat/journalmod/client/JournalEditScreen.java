@@ -24,12 +24,11 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.server.network.Filterable;
+import net.minecraft.network.protocol.game.ServerboundEditBookPacket;
 import net.minecraft.util.StringUtil;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.WritableBookContent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
@@ -40,6 +39,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Optional;
 
 /**
  * Base on {@link net.minecraft.client.gui.screens.inventory.BookEditScreen}
@@ -53,6 +53,9 @@ public class JournalEditScreen extends Screen {
     private static final int IMAGE_HEIGHT = 192;
     private static final int BACKGROUND_TEXTURE_WIDTH = 256;
     private static final int BACKGROUND_TEXTURE_HEIGHT = 256;
+
+    private final Player owner;
+
     /**
      * Whether the book's title or contents has been modified since being opened
      */
@@ -86,16 +89,17 @@ public class JournalEditScreen extends Screen {
 
     public JournalEditScreen(Player owner, List<String> pages) {
         super(GameNarrator.NO_TITLE);
+        this.owner = owner;
 
         var mainHandItem = owner.getItemInHand(InteractionHand.MAIN_HAND);
         var writablebookcontent = mainHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
         if (writablebookcontent != null) {
-            this.book = mainHandItem ;
+            this.book = mainHandItem;
         } else {
             var offHandItem = owner.getItemInHand(InteractionHand.OFF_HAND);
             writablebookcontent = offHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
             if (writablebookcontent != null) {
-                this.book = offHandItem ;
+                this.book = offHandItem;
             } else {
                 this.book = null;
             }
@@ -145,8 +149,14 @@ public class JournalEditScreen extends Screen {
         this.updateButtonVisibility();
     }
 
+    /**
+     * Base on BookEditScreen#saveChanges
+     */
     private void writeToBook() {
-        this.book.set(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(this.pages.stream().map(Filterable::passThrough).toList()));
+        int slot = owner.getUsedItemHand() == InteractionHand.MAIN_HAND
+                ? this.owner.getInventory().selected : 40;
+        //noinspection DataFlowIssue
+        this.minecraft.getConnection().send(new ServerboundEditBookPacket(slot, this.pages, Optional.empty()));
     }
 
     private void pageBack() {
