@@ -20,10 +20,10 @@ public class AttachmentSyncHandler {
 
     @SubscribeEvent
     public static void syncOnLogin(PlayerEvent.PlayerLoggedInEvent e) {
-        var player = e.getEntity();
-        if (player instanceof ServerPlayer sPlayer) {
-            var sidePages = player.getData(ATT_JOURNAL);
-            PacketDistributor.sendToPlayer(sPlayer, new JournalDataPacket(sidePages));
+        var entity = e.getEntity();
+        if (entity instanceof ServerPlayer p) {
+            var sidePages = entity.getData(ATT_JOURNAL);
+            PacketDistributor.sendToPlayer(p, new JournalDataPacket(sidePages));
         }
     }
 
