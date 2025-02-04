@@ -12,8 +12,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import org.jetbrains.annotations.NotNull;
 import top.birthcat.journalmod.common.JournalDataPacket;
 
 import java.util.List;
@@ -27,10 +25,8 @@ import java.util.List;
 @EventBusSubscriber(value = Dist.CLIENT)
 public class ClientJournalHolder {
 
-    public static final List<@NotNull String> DEFAULT_DATA = List.of(
-            I18n.get("book.journalmod.load")
-    );
-    private static List<String> journalData = DEFAULT_DATA;
+    private static List<String> journalData = List.of();
+    private static boolean isLoaded = false;
 
     public static List<String> getJournalData() {
         return journalData;
@@ -38,17 +34,26 @@ public class ClientJournalHolder {
 
     public static void setJournal(List<String> newJournal) {
         journalData = newJournal;
-        if (DEFAULT_DATA != journalData) {
-            PacketDistributor.sendToServer(new JournalDataPacket(newJournal));
-        }
+        PacketDistributor.sendToServer(new JournalDataPacket(newJournal));
+    }
+
+    public static boolean isLoaded() {
+        return isLoaded;
+    }
+
+    public static boolean isWelcome() {
+        return journalData.isEmpty();
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
-        journalData = DEFAULT_DATA;
+        isLoaded = false;
+        journalData = List.of();
     }
 
-    public static void syncWithServer(JournalDataPacket packet, IPayloadContext ctx) {
-        journalData = packet.pages();
+    public static void syncWithServer(List<String> pages) {
+        journalData = pages;
+        isLoaded = true;
     }
+
 }

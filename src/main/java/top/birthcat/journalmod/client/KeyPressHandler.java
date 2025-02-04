@@ -26,7 +26,7 @@ public class KeyPressHandler {
         var mc = Minecraft.getInstance();
         var player = mc.player;
         @SuppressWarnings("DataFlowIssue")
-        var editScreen = new JournalEditScreen(player, ClientJournalHolder.getJournalData());
+        var editScreen = new JournalEditScreen(player);
         mc.setScreen(editScreen);
     }
 }

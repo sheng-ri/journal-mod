@@ -20,6 +20,7 @@ import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.gui.screens.inventory.PageButton;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -53,9 +54,8 @@ public class JournalEditScreen extends Screen {
     private static final int IMAGE_HEIGHT = 192;
     private static final int BACKGROUND_TEXTURE_WIDTH = 256;
     private static final int BACKGROUND_TEXTURE_HEIGHT = 256;
-
     private final Player owner;
-
+    private final ItemStack book;
     /**
      * Whether the book's title or contents has been modified since being opened
      */
@@ -85,9 +85,10 @@ public class JournalEditScreen extends Screen {
     @Nullable
     private DisplayCache displayCache = DisplayCache.EMPTY;
     private Component pageMsg = CommonComponents.EMPTY;
-    private final ItemStack book;
 
-    public JournalEditScreen(Player owner, List<String> pages) {
+    private boolean isLoaded;
+
+    public JournalEditScreen(Player owner) {
         super(GameNarrator.NO_TITLE);
         this.owner = owner;
 
@@ -105,9 +106,23 @@ public class JournalEditScreen extends Screen {
             }
         }
 
-        this.pages.addAll(pages);
-        if (this.pages.isEmpty()) {
-            this.pages.add("");
+        // show loading or show journal.
+        this.isLoaded = ClientJournalHolder.isLoaded();
+        if (isLoaded) {
+            updatePageData();
+        } else {
+            this.pages.add(I18n.get("book.journalmod.loading"));
+        }
+    }
+
+    private void updatePageData() {
+        if (ClientJournalHolder.isWelcome()) {
+            this.pages.add(I18n.get("book.journalmod.welcome"));
+        } else {
+            this.pages.addAll(ClientJournalHolder.getJournalData());
+            if (this.pages.isEmpty()) {
+                this.pages.add("");
+            }
         }
     }
 
@@ -129,6 +144,17 @@ public class JournalEditScreen extends Screen {
     public void tick() {
         super.tick();
         this.frameTick++;
+
+        // show data when loaded.
+        if (!isLoaded) {
+            isLoaded = ClientJournalHolder.isLoaded();
+            if (isLoaded) {
+                updateButtonVisibility();
+                pages.clear();
+                updatePageData();
+                clearDisplayCache();
+            }
+        }
     }
 
     @Override
@@ -182,9 +208,12 @@ public class JournalEditScreen extends Screen {
         this.clearDisplayCacheAfterPageChange();
     }
 
+    // disable button when loading.
     private void updateButtonVisibility() {
         this.backButton.visible = this.currentPage > 0;
-        this.writeButton.active = this.book != null;
+        this.writeButton.active = isLoaded && this.book != null;
+        this.forwardButton.active = isLoaded;
+        this.doneButton.active = isLoaded;
     }
 
     private void eraseEmptyTrailingPages() {
@@ -228,7 +257,10 @@ public class JournalEditScreen extends Screen {
     public boolean charTyped(char codePoint, int modifiers) {
         if (super.charTyped(codePoint, modifiers)) {
             return true;
-        } else if (StringUtil.isAllowedChatCharacter(codePoint)) {
+        }  else if (StringUtil.isAllowedChatCharacter(codePoint)) {
+            // disable insert when loading.
+            if(!isLoaded)
+                return false;
             this.pageEdit.insertText(Character.toString(codePoint));
             this.clearDisplayCache();
             return true;
@@ -411,6 +443,10 @@ public class JournalEditScreen extends Screen {
         if (super.mouseClicked(mouseX, mouseY, button)) {
             return true;
         } else {
+            // disable click when loading.
+            if (!isLoaded)
+                return false;
+
             if (button == 0) {
                 long i = Util.getMillis();
                 DisplayCache bookeditscreen$displaycache = this.getDisplayCache();
@@ -447,6 +483,10 @@ public class JournalEditScreen extends Screen {
         if (super.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
             return true;
         } else {
+            // disable grad select when loading.
+            if (!isLoaded)
+                return false;
+
             if (button == 0) {
                 DisplayCache bookeditscreen$displaycache = this.getDisplayCache();
                 int i = bookeditscreen$displaycache.getIndexAtPosition(

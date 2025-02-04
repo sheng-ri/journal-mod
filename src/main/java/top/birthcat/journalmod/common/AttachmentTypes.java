@@ -6,9 +6,7 @@
 package top.birthcat.journalmod.common;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.client.resources.language.I18n;
 import net.neoforged.neoforge.attachment.AttachmentType;
-import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import top.birthcat.journalmod.JournalMod;
@@ -26,16 +24,10 @@ public class AttachmentTypes {
 
     public static final Supplier<AttachmentType<List<String>>> ATT_JOURNAL =
             MOD_ATTACHMENT_TYPES.register(
-                    "journal", () -> AttachmentType.builder(AttachmentTypes::defaultContent)
+                    "journal", () -> AttachmentType.builder(() -> List.<String>of())
                             .serialize(Codec.list(Codec.string(0, MAX_LEN_PER_PAGE), 0, MAX_PAGES))
                             .copyOnDeath()
                             .build()
             );
-
-    private static List<String> defaultContent(IAttachmentHolder holder) {
-        return List.of(
-                I18n.get("book.journalmod.default.content")
-        );
-    }
 
 }
