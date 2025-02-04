@@ -6,10 +6,13 @@
 package top.birthcat.journalmod.common;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.PacketDecoder;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import top.birthcat.journalmod.JournalMod;
 
@@ -20,7 +23,9 @@ import java.util.List;
  * but is bidirectional.
  */
 public record JournalDataPacket(
-        List<String> pages
+        List<String> pages,
+        CompoundTag stackData,
+        int slot
 ) implements CustomPacketPayload {
 
     public static final int MAX_LEN_PER_PAGE = 1024;
@@ -31,6 +36,10 @@ public record JournalDataPacket(
     public static final StreamCodec<ByteBuf, JournalDataPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.stringUtf8(MAX_LEN_PER_PAGE).apply(ByteBufCodecs.list(MAX_PAGES)),
             JournalDataPacket::pages,
+            ByteBufCodecs.COMPOUND_TAG,
+            JournalDataPacket::stackData,
+            ByteBufCodecs.INT,
+            JournalDataPacket::slot,
             JournalDataPacket::new
     );
 

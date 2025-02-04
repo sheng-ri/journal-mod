@@ -8,6 +8,7 @@ package top.birthcat.journalmod.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
@@ -16,6 +17,7 @@ import org.lwjgl.glfw.GLFW;
 
 import static top.birthcat.journalmod.JournalMod.MODID;
 
+@OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientSetupHandler {
 

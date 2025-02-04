@@ -6,7 +6,7 @@
 package top.birthcat.journalmod.common;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -34,7 +34,7 @@ public class AttachmentTypes {
 
     private static List<String> defaultContent(IAttachmentHolder holder) {
         return List.of(
-                I18n.get("book.journalmod.default.content")
+                Component.translatable("book.journalmod.default.content").getString()
         );
     }
 

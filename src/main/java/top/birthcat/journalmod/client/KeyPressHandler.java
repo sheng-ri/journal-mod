@@ -15,7 +15,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import static top.birthcat.journalmod.client.ClientSetupHandler.OPEN_MAP;
 
 @OnlyIn(Dist.CLIENT)
-@EventBusSubscriber
+@EventBusSubscriber(value = Dist.CLIENT)
 public class KeyPressHandler {
 
     @SubscribeEvent

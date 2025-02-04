@@ -5,7 +5,10 @@
 
 package top.birthcat.journalmod.client;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -23,7 +26,6 @@ import java.util.List;
  * get rid of LocalPlayer clone.
  * this also enable recover after logout.
  */
-@OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(value = Dist.CLIENT)
 public class ClientJournalHolder {
 
@@ -36,10 +38,10 @@ public class ClientJournalHolder {
         return journalData;
     }
 
-    public static void setJournal(List<String> newJournal) {
+    public static void setJournal(List<String> newJournal, ItemStack stack,int slot) {
         journalData = newJournal;
         if (DEFAULT_DATA != journalData) {
-            PacketDistributor.sendToServer(new JournalDataPacket(newJournal));
+            PacketDistributor.sendToServer(new JournalDataPacket(newJournal, (CompoundTag) stack.save(Minecraft.getInstance().level.registryAccess()),slot));
         }
     }
 

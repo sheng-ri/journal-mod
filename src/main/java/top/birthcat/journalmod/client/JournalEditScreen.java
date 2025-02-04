@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.Util;
 import net.minecraft.client.GameNarrator;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,16 +21,23 @@ import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.gui.screens.inventory.PageButton;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.network.Filterable;
 import net.minecraft.util.StringUtil;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.WritableBookContent;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
@@ -37,6 +45,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
@@ -83,6 +92,7 @@ public class JournalEditScreen extends Screen {
     private DisplayCache displayCache = DisplayCache.EMPTY;
     private Component pageMsg = CommonComponents.EMPTY;
     private final ItemStack book;
+    private int slot = -1;
 
     public JournalEditScreen(Player owner, List<String> pages) {
         super(GameNarrator.NO_TITLE);
@@ -98,6 +108,15 @@ public class JournalEditScreen extends Screen {
                 this.book = offHandItem ;
             } else {
                 this.book = null;
+            }
+        }
+
+        if(this.book!=null){
+            for (Slot slot : owner.inventoryMenu.slots) {
+                if(slot.getItem().equals(book)){
+                    this.slot = slot.index;
+                    break;
+                }
             }
         }
 
@@ -136,8 +155,12 @@ public class JournalEditScreen extends Screen {
         }).bounds(this.width / 2 + 2, 196, 98, 20).build());
         this.writeButton = this.addRenderableWidget(Button.builder(Component.translatable("book.journalmod.transcription"), p_98177_ -> {
             this.minecraft.setScreen(null);
+            try {
+                this.writeToBook();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
             this.saveChanges();
-            this.writeToBook();
         }).bounds(this.width / 2 - 100, 196, 98, 20).build());
         int i = (this.width - IMAGE_WIDTH) / 2;
         this.forwardButton = this.addRenderableWidget(new PageButton(i + 116, 159, true, p_98144_ -> this.pageForward(), true));
@@ -145,7 +168,7 @@ public class JournalEditScreen extends Screen {
         this.updateButtonVisibility();
     }
 
-    private void writeToBook() {
+    private void writeToBook() throws IllegalAccessException {
         this.book.set(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(this.pages.stream().map(Filterable::passThrough).toList()));
     }
 
@@ -188,7 +211,7 @@ public class JournalEditScreen extends Screen {
     private void saveChanges() {
         if (this.isModified) {
             this.eraseEmptyTrailingPages();
-            ClientJournalHolder.setJournal(pages);
+            ClientJournalHolder.setJournal(pages,this.book,this.slot);
         }
     }
 
