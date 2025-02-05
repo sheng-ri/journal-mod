@@ -16,6 +16,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.font.TextFieldHelper;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.BookEditScreen;
 import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.gui.screens.inventory.PageButton;
 import net.minecraft.client.renderer.Rect2i;
@@ -85,10 +86,11 @@ public class JournalEditScreen extends Screen {
     private Component pageMsg = CommonComponents.EMPTY;
     private final ItemStack book;
     private int slot = -1;
+    private final Player owner;
 
     public JournalEditScreen(Player owner, List<String> pages) {
         super(GameNarrator.NO_TITLE);
-
+        this.owner = owner;
         var mainHandItem = owner.getItemInHand(InteractionHand.MAIN_HAND);
         var writablebookcontent = mainHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
         if (writablebookcontent != null) {
