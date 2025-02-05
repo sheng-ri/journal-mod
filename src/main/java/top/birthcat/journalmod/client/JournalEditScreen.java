@@ -16,6 +16,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.font.TextFieldHelper;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.BookEditScreen;
 import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.gui.screens.inventory.PageButton;
 import net.minecraft.client.renderer.Rect2i;
@@ -25,25 +26,25 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.network.protocol.game.ServerboundEditBookPacket;
 import net.minecraft.util.StringUtil;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
+import top.birthcat.journalmod.common.packet.TranscribePacket;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Optional;
 
 /**
- * Base on {@link net.minecraft.client.gui.screens.inventory.BookEditScreen}
+ * Base on {@link BookEditScreen}
  */
 @OnlyIn(Dist.CLIENT)
 public class JournalEditScreen extends Screen {
@@ -71,7 +72,7 @@ public class JournalEditScreen extends Screen {
             this::setCurrentPageText,
             this::getClipboard,
             this::setClipboard,
-            p_280853_ -> p_280853_.length() < 1024 && this.font.wordWrapHeight(p_280853_, TEXT_WIDTH) <= TEXT_HEIGHT
+            p_280853_ -> p_280853_.length() < 1024 && font.wordWrapHeight(p_280853_, TEXT_WIDTH) <= TEXT_HEIGHT
     );
     /**
      * In milliseconds
@@ -81,11 +82,14 @@ public class JournalEditScreen extends Screen {
     private PageButton forwardButton;
     private PageButton backButton;
     private Button doneButton;
-    private Button writeButton;
+    private Button transcribeButton;
     @Nullable
     private DisplayCache displayCache = DisplayCache.EMPTY;
     private Component pageMsg = CommonComponents.EMPTY;
 
+    /**
+     * Indicate journal is loaded.
+     */
     private boolean isLoaded;
 
     public JournalEditScreen(Player owner) {
@@ -115,35 +119,38 @@ public class JournalEditScreen extends Screen {
         }
     }
 
+    /**
+     * Update page data from journal data.
+     */
     private void updatePageData() {
-        if (ClientJournalHolder.isWelcome()) {
-            this.pages.add(I18n.get("book.journalmod.welcome"));
+        if (ClientJournalHolder.isWelcomeText()) {
+            pages.add(I18n.get("book.journalmod.welcome"));
         } else {
-            this.pages.addAll(ClientJournalHolder.getJournalData());
-            if (this.pages.isEmpty()) {
-                this.pages.add("");
+            pages.addAll(ClientJournalHolder.getJournalData());
+            if (pages.isEmpty()) {
+                pages.add("");
             }
         }
     }
 
     private void setClipboard(String clipboardValue) {
-        if (this.minecraft != null) {
-            TextFieldHelper.setClipboardContents(this.minecraft, clipboardValue);
+        if (minecraft != null) {
+            TextFieldHelper.setClipboardContents(minecraft, clipboardValue);
         }
     }
 
     private String getClipboard() {
-        return this.minecraft != null ? TextFieldHelper.getClipboardContents(this.minecraft) : "";
+        return minecraft != null ? TextFieldHelper.getClipboardContents(minecraft) : "";
     }
 
     private int getNumPages() {
-        return this.pages.size();
+        return pages.size();
     }
 
     @Override
     public void tick() {
         super.tick();
-        this.frameTick++;
+        frameTick++;
 
         // show data when loaded.
         if (!isLoaded) {
@@ -159,65 +166,61 @@ public class JournalEditScreen extends Screen {
 
     @Override
     protected void init() {
-        this.clearDisplayCache();
-        this.doneButton = this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, p_280851_ -> {
-            this.minecraft.setScreen(null);
-            this.saveChanges();
-        }).bounds(this.width / 2 + 2, 196, 98, 20).build());
-        this.writeButton = this.addRenderableWidget(Button.builder(Component.translatable("book.journalmod.transcribe"), p_98177_ -> {
-            this.minecraft.setScreen(null);
-            this.saveChanges();
-            this.writeToBook();
-        }).bounds(this.width / 2 - 100, 196, 98, 20).build());
-        int i = (this.width - IMAGE_WIDTH) / 2;
-        this.forwardButton = this.addRenderableWidget(new PageButton(i + 116, 159, true, p_98144_ -> this.pageForward(), true));
-        this.backButton = this.addRenderableWidget(new PageButton(i + 43, 159, false, p_98113_ -> this.pageBack(), true));
-        this.updateButtonVisibility();
+        clearDisplayCache();
+        doneButton = addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, p_280851_ -> {
+            minecraft.setScreen(null);
+            saveChanges();
+        }).bounds(width / 2 + 2, 196, 98, 20).build());
+        transcribeButton = addRenderableWidget(Button.builder(Component.translatable("book.journalmod.transcribe"), p_98177_ -> {
+            minecraft.setScreen(null);
+            saveChanges();
+            transcribeToBook();
+        }).bounds(width / 2 - 100, 196, 98, 20).build());
+        int i = (width - IMAGE_WIDTH) / 2;
+        forwardButton = addRenderableWidget(new PageButton(i + 116, 159, true, p_98144_ -> pageForward(), true));
+        backButton = addRenderableWidget(new PageButton(i + 43, 159, false, p_98113_ -> pageBack(), true));
+        updateButtonVisibility();
     }
 
-    /**
-     * Base on BookEditScreen#saveChanges
-     */
-    private void writeToBook() {
-        int slot = owner.getUsedItemHand() == InteractionHand.MAIN_HAND
-                ? this.owner.getInventory().selected : 40;
-        //noinspection DataFlowIssue
-        this.minecraft.getConnection().send(new ServerboundEditBookPacket(slot, this.pages, Optional.empty()));
+    private void transcribeToBook() {
+        var slot = owner.getUsedItemHand() == InteractionHand.MAIN_HAND ?
+                owner.getInventory().selected : 40;
+        PacketDistributor.sendToServer(new TranscribePacket(slot));
     }
 
     private void pageBack() {
-        if (this.currentPage > 0) {
-            this.currentPage--;
+        if (currentPage > 0) {
+            currentPage--;
         }
 
-        this.updateButtonVisibility();
-        this.clearDisplayCacheAfterPageChange();
+        updateButtonVisibility();
+        clearDisplayCacheAfterPageChange();
     }
 
     private void pageForward() {
-        if (this.currentPage < this.getNumPages() - 1) {
-            this.currentPage++;
+        if (currentPage < getNumPages() - 1) {
+            currentPage++;
         } else {
-            this.appendPageToBook();
-            if (this.currentPage < this.getNumPages() - 1) {
-                this.currentPage++;
+            appendPageToBook();
+            if (currentPage < getNumPages() - 1) {
+                currentPage++;
             }
         }
 
-        this.updateButtonVisibility();
-        this.clearDisplayCacheAfterPageChange();
+        updateButtonVisibility();
+        clearDisplayCacheAfterPageChange();
     }
 
     // disable button when loading.
     private void updateButtonVisibility() {
-        this.backButton.visible = this.currentPage > 0;
-        this.writeButton.active = isLoaded && this.book != null;
-        this.forwardButton.active = isLoaded;
-        this.doneButton.active = isLoaded;
+        backButton.visible = currentPage > 0;
+        transcribeButton.active = isLoaded && book != null;
+        forwardButton.active = isLoaded;
+        doneButton.active = isLoaded;
     }
 
     private void eraseEmptyTrailingPages() {
-        ListIterator<String> listiterator = this.pages.listIterator(this.pages.size());
+        ListIterator<String> listiterator = pages.listIterator(pages.size());
 
         while (listiterator.hasPrevious() && listiterator.previous().isEmpty()) {
             listiterator.remove();
@@ -225,16 +228,16 @@ public class JournalEditScreen extends Screen {
     }
 
     private void saveChanges() {
-        if (this.isModified) {
-            this.eraseEmptyTrailingPages();
+        if (isModified) {
+            eraseEmptyTrailingPages();
             ClientJournalHolder.setJournal(pages);
         }
     }
 
     private void appendPageToBook() {
-        if (this.getNumPages() < 100) {
-            this.pages.add("");
-            this.isModified = true;
+        if (getNumPages() < 100) {
+            pages.add("");
+            isModified = true;
         }
     }
 
@@ -243,9 +246,9 @@ public class JournalEditScreen extends Screen {
         if (super.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         } else {
-            boolean flag = this.bookKeyPressed(keyCode, scanCode, modifiers);
+            boolean flag = bookKeyPressed(keyCode, scanCode, modifiers);
             if (flag) {
-                this.clearDisplayCache();
+                clearDisplayCache();
                 return true;
             } else {
                 return false;
@@ -257,12 +260,12 @@ public class JournalEditScreen extends Screen {
     public boolean charTyped(char codePoint, int modifiers) {
         if (super.charTyped(codePoint, modifiers)) {
             return true;
-        }  else if (StringUtil.isAllowedChatCharacter(codePoint)) {
+        } else if (StringUtil.isAllowedChatCharacter(codePoint)) {
             // disable insert when loading.
-            if(!isLoaded)
+            if (!isLoaded)
                 return false;
-            this.pageEdit.insertText(Character.toString(codePoint));
-            this.clearDisplayCache();
+            pageEdit.insertText(Character.toString(codePoint));
+            clearDisplayCache();
             return true;
         } else {
             return false;
@@ -274,16 +277,16 @@ public class JournalEditScreen extends Screen {
      */
     private boolean bookKeyPressed(int keyCode, int scanCode, int modifiers) {
         if (Screen.isSelectAll(keyCode)) {
-            this.pageEdit.selectAll();
+            pageEdit.selectAll();
             return true;
         } else if (Screen.isCopy(keyCode)) {
-            this.pageEdit.copy();
+            pageEdit.copy();
             return true;
         } else if (Screen.isPaste(keyCode)) {
-            this.pageEdit.paste();
+            pageEdit.paste();
             return true;
         } else if (Screen.isCut(keyCode)) {
-            this.pageEdit.cut();
+            pageEdit.cut();
             return true;
         } else {
             TextFieldHelper.CursorStep textfieldhelper$cursorstep = Screen.hasControlDown()
@@ -291,47 +294,47 @@ public class JournalEditScreen extends Screen {
                     : TextFieldHelper.CursorStep.CHARACTER;
             return switch (keyCode) {
                 case 257, 335 -> {
-                    this.pageEdit.insertText("\n");
+                    pageEdit.insertText("\n");
                     yield true;
                 }
                 case 259 -> {
-                    this.pageEdit.removeFromCursor(-1, textfieldhelper$cursorstep);
+                    pageEdit.removeFromCursor(-1, textfieldhelper$cursorstep);
                     yield true;
                 }
                 case 261 -> {
-                    this.pageEdit.removeFromCursor(1, textfieldhelper$cursorstep);
+                    pageEdit.removeFromCursor(1, textfieldhelper$cursorstep);
                     yield true;
                 }
                 case 262 -> {
-                    this.pageEdit.moveBy(1, Screen.hasShiftDown(), textfieldhelper$cursorstep);
+                    pageEdit.moveBy(1, Screen.hasShiftDown(), textfieldhelper$cursorstep);
                     yield true;
                 }
                 case 263 -> {
-                    this.pageEdit.moveBy(-1, Screen.hasShiftDown(), textfieldhelper$cursorstep);
+                    pageEdit.moveBy(-1, Screen.hasShiftDown(), textfieldhelper$cursorstep);
                     yield true;
                 }
                 case 264 -> {
-                    this.keyDown();
+                    keyDown();
                     yield true;
                 }
                 case 265 -> {
-                    this.keyUp();
+                    keyUp();
                     yield true;
                 }
                 case 266 -> {
-                    this.backButton.onPress();
+                    backButton.onPress();
                     yield true;
                 }
                 case 267 -> {
-                    this.forwardButton.onPress();
+                    forwardButton.onPress();
                     yield true;
                 }
                 case 268 -> {
-                    this.keyHome();
+                    keyHome();
                     yield true;
                 }
                 case 269 -> {
-                    this.keyEnd();
+                    keyEnd();
                     yield true;
                 }
                 default -> false;
@@ -340,82 +343,82 @@ public class JournalEditScreen extends Screen {
     }
 
     private void keyUp() {
-        this.changeLine(-1);
+        changeLine(-1);
     }
 
     private void keyDown() {
-        this.changeLine(1);
+        changeLine(1);
     }
 
     private void changeLine(int yChange) {
-        int i = this.pageEdit.getCursorPos();
-        int j = this.getDisplayCache().changeLine(i, yChange);
-        this.pageEdit.setCursorPos(j, Screen.hasShiftDown());
+        int i = pageEdit.getCursorPos();
+        int j = getDisplayCache().changeLine(i, yChange);
+        pageEdit.setCursorPos(j, Screen.hasShiftDown());
     }
 
     private void keyHome() {
         if (Screen.hasControlDown()) {
-            this.pageEdit.setCursorToStart(Screen.hasShiftDown());
+            pageEdit.setCursorToStart(Screen.hasShiftDown());
         } else {
-            int i = this.pageEdit.getCursorPos();
-            int j = this.getDisplayCache().findLineStart(i);
-            this.pageEdit.setCursorPos(j, Screen.hasShiftDown());
+            int i = pageEdit.getCursorPos();
+            int j = getDisplayCache().findLineStart(i);
+            pageEdit.setCursorPos(j, Screen.hasShiftDown());
         }
     }
 
     private void keyEnd() {
         if (Screen.hasControlDown()) {
-            this.pageEdit.setCursorToEnd(Screen.hasShiftDown());
+            pageEdit.setCursorToEnd(Screen.hasShiftDown());
         } else {
-            DisplayCache bookeditscreen$displaycache = this.getDisplayCache();
-            int i = this.pageEdit.getCursorPos();
+            DisplayCache bookeditscreen$displaycache = getDisplayCache();
+            int i = pageEdit.getCursorPos();
             int j = bookeditscreen$displaycache.findLineEnd(i);
-            this.pageEdit.setCursorPos(j, Screen.hasShiftDown());
+            pageEdit.setCursorPos(j, Screen.hasShiftDown());
         }
     }
 
     private String getCurrentPageText() {
-        return this.currentPage >= 0 && this.currentPage < this.pages.size() ? this.pages.get(this.currentPage) : "";
+        return currentPage >= 0 && currentPage < pages.size() ? pages.get(currentPage) : "";
     }
 
     private void setCurrentPageText(String text) {
-        if (this.currentPage >= 0 && this.currentPage < this.pages.size()) {
-            this.pages.set(this.currentPage, text);
-            this.isModified = true;
-            this.clearDisplayCache();
+        if (currentPage >= 0 && currentPage < pages.size()) {
+            pages.set(currentPage, text);
+            isModified = true;
+            clearDisplayCache();
         }
     }
 
     @Override
     public void render(GuiGraphics p_281724_, int p_282965_, int p_283294_, float p_281293_) {
         super.render(p_281724_, p_282965_, p_283294_, p_281293_);
-        this.setFocused(null);
-        int i = (this.width - IMAGE_WIDTH) / 2;
-        int j1 = this.font.width(this.pageMsg);
-        p_281724_.drawString(this.font, this.pageMsg, i - j1 + IMAGE_WIDTH - 44, 18, 0, false);
-        DisplayCache bookeditscreen$displaycache = this.getDisplayCache();
+        setFocused(null);
+        int i = (width - IMAGE_WIDTH) / 2;
+        int j1 = font.width(pageMsg);
+        p_281724_.drawString(font, pageMsg, i - j1 + IMAGE_WIDTH - 44, 18, 0, false);
+        DisplayCache bookeditscreen$displaycache = getDisplayCache();
 
         for (LineInfo bookeditscreen$lineinfo : bookeditscreen$displaycache.lines) {
-            p_281724_.drawString(this.font, bookeditscreen$lineinfo.asComponent, bookeditscreen$lineinfo.x, bookeditscreen$lineinfo.y, -16777216, false);
+            p_281724_.drawString(font, bookeditscreen$lineinfo.asComponent, bookeditscreen$lineinfo.x, bookeditscreen$lineinfo.y, -16777216, false);
         }
 
-        this.renderHighlight(p_281724_, bookeditscreen$displaycache.selection);
-        this.renderCursor(p_281724_, bookeditscreen$displaycache.cursor, bookeditscreen$displaycache.cursorAtEnd);
+        renderHighlight(p_281724_, bookeditscreen$displaycache.selection);
+        renderCursor(p_281724_, bookeditscreen$displaycache.cursor, bookeditscreen$displaycache.cursorAtEnd);
     }
 
     @Override
     public void renderBackground(GuiGraphics p_294860_, int p_295019_, int p_294307_, float p_295562_) {
-        this.renderTransparentBackground(p_294860_);
-        p_294860_.blit(RenderType::guiTextured, BookViewScreen.BOOK_LOCATION, (this.width - IMAGE_WIDTH) / 2, 2, 0.0F, 0.0F, IMAGE_WIDTH, IMAGE_HEIGHT, BACKGROUND_TEXTURE_WIDTH, BACKGROUND_TEXTURE_HEIGHT);
+        renderTransparentBackground(p_294860_);
+        p_294860_.blit(RenderType::guiTextured, BookViewScreen.BOOK_LOCATION, (width - IMAGE_WIDTH) / 2, 2, 0.0F, 0.0F, IMAGE_WIDTH, IMAGE_HEIGHT, BACKGROUND_TEXTURE_WIDTH, BACKGROUND_TEXTURE_HEIGHT);
     }
 
     private void renderCursor(GuiGraphics guiGraphics, Pos2i cursorPos, boolean isEndOfText) {
-        if (this.frameTick / 6 % 2 == 0) {
-            cursorPos = this.convertLocalToScreen(cursorPos);
+        if (frameTick / 6 % 2 == 0) {
+            cursorPos = convertLocalToScreen(cursorPos);
             if (!isEndOfText) {
                 guiGraphics.fill(cursorPos.x, cursorPos.y - 1, cursorPos.x + 1, cursorPos.y + 9, -16777216);
             } else {
-                guiGraphics.drawString(this.font, "_", cursorPos.x, cursorPos.y, 0, false);
+                guiGraphics.drawString(font, "_", cursorPos.x, cursorPos.y, 0, false);
             }
         }
     }
@@ -431,11 +434,11 @@ public class JournalEditScreen extends Screen {
     }
 
     private Pos2i convertScreenToLocal(Pos2i screenPos) {
-        return new Pos2i(screenPos.x - (this.width - IMAGE_WIDTH) / 2 - 36, screenPos.y - 32);
+        return new Pos2i(screenPos.x - (width - IMAGE_WIDTH) / 2 - 36, screenPos.y - 32);
     }
 
     private Pos2i convertLocalToScreen(Pos2i localScreenPos) {
-        return new Pos2i(localScreenPos.x + (this.width - IMAGE_WIDTH) / 2 + 36, localScreenPos.y + 32);
+        return new Pos2i(localScreenPos.x + (width - IMAGE_WIDTH) / 2 + 36, localScreenPos.y + 32);
     }
 
     @Override
@@ -449,24 +452,24 @@ public class JournalEditScreen extends Screen {
 
             if (button == 0) {
                 long i = Util.getMillis();
-                DisplayCache bookeditscreen$displaycache = this.getDisplayCache();
+                DisplayCache bookeditscreen$displaycache = getDisplayCache();
                 int j = bookeditscreen$displaycache.getIndexAtPosition(
-                        this.font, this.convertScreenToLocal(new Pos2i((int) mouseX, (int) mouseY))
+                        font, convertScreenToLocal(new Pos2i((int) mouseX, (int) mouseY))
                 );
                 if (j >= 0) {
-                    if (j != this.lastIndex || i - this.lastClickTime >= 250L) {
-                        this.pageEdit.setCursorPos(j, Screen.hasShiftDown());
-                    } else if (!this.pageEdit.isSelecting()) {
-                        this.selectWord(j);
+                    if (j != lastIndex || i - lastClickTime >= 250L) {
+                        pageEdit.setCursorPos(j, Screen.hasShiftDown());
+                    } else if (!pageEdit.isSelecting()) {
+                        selectWord(j);
                     } else {
-                        this.pageEdit.selectAll();
+                        pageEdit.selectAll();
                     }
 
-                    this.clearDisplayCache();
+                    clearDisplayCache();
                 }
 
-                this.lastIndex = j;
-                this.lastClickTime = i;
+                lastIndex = j;
+                lastClickTime = i;
             }
 
             return true;
@@ -474,8 +477,8 @@ public class JournalEditScreen extends Screen {
     }
 
     private void selectWord(int index) {
-        String s = this.getCurrentPageText();
-        this.pageEdit.setSelectionRange(StringSplitter.getWordPosition(s, -1, index, false), StringSplitter.getWordPosition(s, 1, index, false));
+        String s = getCurrentPageText();
+        pageEdit.setSelectionRange(StringSplitter.getWordPosition(s, -1, index, false), StringSplitter.getWordPosition(s, 1, index, false));
     }
 
     @Override
@@ -488,12 +491,12 @@ public class JournalEditScreen extends Screen {
                 return false;
 
             if (button == 0) {
-                DisplayCache bookeditscreen$displaycache = this.getDisplayCache();
+                DisplayCache bookeditscreen$displaycache = getDisplayCache();
                 int i = bookeditscreen$displaycache.getIndexAtPosition(
-                        this.font, this.convertScreenToLocal(new Pos2i((int) mouseX, (int) mouseY))
+                        font, convertScreenToLocal(new Pos2i((int) mouseX, (int) mouseY))
                 );
-                this.pageEdit.setCursorPos(i, true);
-                this.clearDisplayCache();
+                pageEdit.setCursorPos(i, true);
+                clearDisplayCache();
             }
 
             return true;
@@ -501,42 +504,42 @@ public class JournalEditScreen extends Screen {
     }
 
     private DisplayCache getDisplayCache() {
-        if (this.displayCache == null) {
-            this.displayCache = this.rebuildDisplayCache();
-            this.pageMsg = Component.translatable("book.pageIndicator", this.currentPage + 1, this.getNumPages());
+        if (displayCache == null) {
+            displayCache = rebuildDisplayCache();
+            pageMsg = Component.translatable("book.pageIndicator", currentPage + 1, getNumPages());
         }
 
-        return this.displayCache;
+        return displayCache;
     }
 
     private void clearDisplayCache() {
-        this.displayCache = null;
+        displayCache = null;
     }
 
     private void clearDisplayCacheAfterPageChange() {
-        this.pageEdit.setCursorToEnd();
-        this.clearDisplayCache();
+        pageEdit.setCursorToEnd();
+        clearDisplayCache();
     }
 
     private DisplayCache rebuildDisplayCache() {
-        String s = this.getCurrentPageText();
+        String s = getCurrentPageText();
         if (s.isEmpty()) {
             return DisplayCache.EMPTY;
         } else {
-            int i = this.pageEdit.getCursorPos();
-            int j = this.pageEdit.getSelectionPos();
+            int i = pageEdit.getCursorPos();
+            int j = pageEdit.getSelectionPos();
             IntList intlist = new IntArrayList();
             List<LineInfo> list = Lists.newArrayList();
             MutableInt mutableint = new MutableInt();
             MutableBoolean mutableboolean = new MutableBoolean();
-            StringSplitter stringsplitter = this.font.getSplitter();
+            StringSplitter stringsplitter = font.getSplitter();
             stringsplitter.splitLines(s, TEXT_WIDTH, Style.EMPTY, true, (p_98132_, p_98133_, p_98134_) -> {
                 int k3 = mutableint.getAndIncrement();
                 String s2 = s.substring(p_98133_, p_98134_);
                 mutableboolean.setValue(s2.endsWith("\n"));
                 String s3 = StringUtils.stripEnd(s2, " \n");
                 int l3 = k3 * 9;
-                Pos2i bookeditscreen$pos2i1 = this.convertLocalToScreen(new Pos2i(0, l3));
+                Pos2i bookeditscreen$pos2i1 = convertLocalToScreen(new Pos2i(0, l3));
                 intlist.add(p_98133_);
                 list.add(new LineInfo(p_98132_, s3, bookeditscreen$pos2i1.x, bookeditscreen$pos2i1.y));
             });
@@ -547,7 +550,7 @@ public class JournalEditScreen extends Screen {
                 bookeditscreen$pos2i = new Pos2i(0, list.size() * 9);
             } else {
                 int k = findLineFromPos(aint, i);
-                int l = this.font.width(s.substring(aint[k], i));
+                int l = font.width(s.substring(aint[k], i));
                 bookeditscreen$pos2i = new Pos2i(l, k * 9);
             }
 
@@ -560,19 +563,19 @@ public class JournalEditScreen extends Screen {
                 if (j1 == k1) {
                     int l1 = j1 * 9;
                     int i2 = aint[j1];
-                    list1.add(this.createPartialLineSelection(s, stringsplitter, l2, i1, l1, i2));
+                    list1.add(createPartialLineSelection(s, stringsplitter, l2, i1, l1, i2));
                 } else {
                     int i3 = j1 + 1 > aint.length ? s.length() : aint[j1 + 1];
-                    list1.add(this.createPartialLineSelection(s, stringsplitter, l2, i3, j1 * 9, aint[j1]));
+                    list1.add(createPartialLineSelection(s, stringsplitter, l2, i3, j1 * 9, aint[j1]));
 
                     for (int j3 = j1 + 1; j3 < k1; j3++) {
                         int j2 = j3 * 9;
                         String s1 = s.substring(aint[j3], aint[j3 + 1]);
                         int k2 = (int) stringsplitter.stringWidth(s1);
-                        list1.add(this.createSelection(new Pos2i(0, j2), new Pos2i(k2, j2 + 9)));
+                        list1.add(createSelection(new Pos2i(0, j2), new Pos2i(k2, j2 + 9)));
                     }
 
-                    list1.add(this.createPartialLineSelection(s, stringsplitter, aint[k1], i1, k1 * 9, aint[k1]));
+                    list1.add(createPartialLineSelection(s, stringsplitter, aint[k1], i1, k1 * 9, aint[k1]));
                 }
             }
 
@@ -592,12 +595,12 @@ public class JournalEditScreen extends Screen {
         String s1 = input.substring(lineStart, endPos);
         Pos2i bookeditscreen$pos2i = new Pos2i((int) splitter.stringWidth(s), y);
         Pos2i bookeditscreen$pos2i1 = new Pos2i((int) splitter.stringWidth(s1), y + 9);
-        return this.createSelection(bookeditscreen$pos2i, bookeditscreen$pos2i1);
+        return createSelection(bookeditscreen$pos2i, bookeditscreen$pos2i1);
     }
 
     private Rect2i createSelection(Pos2i corner1, Pos2i corner2) {
-        Pos2i bookeditscreen$pos2i = this.convertLocalToScreen(corner1);
-        Pos2i bookeditscreen$pos2i1 = this.convertLocalToScreen(corner2);
+        Pos2i bookeditscreen$pos2i = convertLocalToScreen(corner1);
+        Pos2i bookeditscreen$pos2i1 = convertLocalToScreen(corner2);
         int i = Math.min(bookeditscreen$pos2i.x, bookeditscreen$pos2i1.x);
         int j = Math.max(bookeditscreen$pos2i.x, bookeditscreen$pos2i1.x);
         int k = Math.min(bookeditscreen$pos2i.y, bookeditscreen$pos2i1.y);
@@ -637,23 +640,23 @@ public class JournalEditScreen extends Screen {
             int i = cursorPosition.y / 9;
             if (i < 0) {
                 return 0;
-            } else if (i >= this.lines.length) {
-                return this.fullText.length();
+            } else if (i >= lines.length) {
+                return fullText.length();
             } else {
-                LineInfo bookeditscreen$lineinfo = this.lines[i];
-                return this.lineStarts[i]
+                LineInfo bookeditscreen$lineinfo = lines[i];
+                return lineStarts[i]
                         + font.getSplitter().plainIndexAtWidth(bookeditscreen$lineinfo.contents, cursorPosition.x, bookeditscreen$lineinfo.style);
             }
         }
 
         public int changeLine(int xChange, int yChange) {
-            int i = findLineFromPos(this.lineStarts, xChange);
+            int i = findLineFromPos(lineStarts, xChange);
             int j = i + yChange;
             int k;
-            if (0 <= j && j < this.lineStarts.length) {
-                int l = xChange - this.lineStarts[i];
-                int i1 = this.lines[j].contents.length();
-                k = this.lineStarts[j] + Math.min(l, i1);
+            if (0 <= j && j < lineStarts.length) {
+                int l = xChange - lineStarts[i];
+                int i1 = lines[j].contents.length();
+                k = lineStarts[j] + Math.min(l, i1);
             } else {
                 k = xChange;
             }
@@ -662,13 +665,13 @@ public class JournalEditScreen extends Screen {
         }
 
         public int findLineStart(int line) {
-            int i = findLineFromPos(this.lineStarts, line);
-            return this.lineStarts[i];
+            int i = findLineFromPos(lineStarts, line);
+            return lineStarts[i];
         }
 
         public int findLineEnd(int line) {
-            int i = findLineFromPos(this.lineStarts, line);
-            return this.lineStarts[i] + this.lines[i].contents.length();
+            int i = findLineFromPos(lineStarts, line);
+            return lineStarts[i] + lines[i].contents.length();
         }
     }
 

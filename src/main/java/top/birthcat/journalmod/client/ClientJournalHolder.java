@@ -11,7 +11,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import top.birthcat.journalmod.common.JournalDataPacket;
+import top.birthcat.journalmod.common.packet.UpdatePacket;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ import java.util.List;
  * this also enable recover after logout.
  */
 @OnlyIn(Dist.CLIENT)
-@EventBusSubscriber(value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public class ClientJournalHolder {
 
     private static List<String> journalData = List.of();
@@ -33,14 +33,14 @@ public class ClientJournalHolder {
 
     public static void setJournal(List<String> newJournal) {
         journalData = newJournal;
-        PacketDistributor.sendToServer(new JournalDataPacket(newJournal));
+        PacketDistributor.sendToServer(new UpdatePacket(newJournal));
     }
 
     public static boolean isLoaded() {
         return isLoaded;
     }
 
-    public static boolean isWelcome() {
+    public static boolean isWelcomeText() {
         return journalData.isEmpty();
     }
 
@@ -50,7 +50,7 @@ public class ClientJournalHolder {
         journalData = List.of();
     }
 
-    public static void syncWithServer(List<String> pages) {
+    public static void syncServer(List<String> pages) {
         journalData = pages;
         isLoaded = true;
     }
