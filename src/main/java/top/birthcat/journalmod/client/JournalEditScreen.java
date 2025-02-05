@@ -93,25 +93,19 @@ public class JournalEditScreen extends Screen {
         var writablebookcontent = mainHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
         if (writablebookcontent != null) {
             this.book = mainHandItem ;
+            this.slot = owner.getInventory().selected;
         } else {
             var offHandItem = owner.getItemInHand(InteractionHand.OFF_HAND);
             writablebookcontent = offHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
             if (writablebookcontent != null) {
                 this.book = offHandItem ;
+                this.slot = 40;
             } else {
                 this.book = null;
             }
         }
 
-        //For ServerboundSetBookPacket
-        if(this.book!=null){
-            for (Slot slot : owner.inventoryMenu.slots) {
-                if(slot.getItem().equals(book)){
-                    this.slot = slot.index;
-                    break;
-                }
-            }
-        }
+        //For ServerboundEditBookPacket
 
         this.pages.addAll(pages);
         if (this.pages.isEmpty()) {
