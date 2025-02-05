@@ -5,7 +5,6 @@
 
 package top.birthcat.journalmod.client;
 
-import net.minecraft.client.resources.language.I18n;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;

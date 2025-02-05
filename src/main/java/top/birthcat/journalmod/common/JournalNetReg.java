@@ -9,6 +9,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import top.birthcat.journalmod.client.ClientJournalHolder;
 import top.birthcat.journalmod.server.AttachmentSyncHandler;
 
@@ -19,13 +20,21 @@ public class JournalNetReg {
     public static void register(final RegisterPayloadHandlersEvent event) {
         final var registrar = event.registrar("1");
         var handler = new DirectionalPayloadHandler<>(
-                ClientJournalHolder::syncWithServer,
-                AttachmentSyncHandler::syncOnEdit
+                JournalNetReg::handleOnClient,
+                JournalNetReg::handleOnServer
         );
         registrar.playBidirectional(
                 JournalDataPacket.TYPE,
                 JournalDataPacket.STREAM_CODEC,
                 handler
         );
+    }
+
+    private static void handleOnServer(JournalDataPacket p, IPayloadContext ctx) {
+        AttachmentSyncHandler.syncOnEdit(ctx.player(),p.pages());
+    }
+
+    private static void handleOnClient(JournalDataPacket p, IPayloadContext ctx) {
+        ClientJournalHolder.syncWithServer(p.pages());
     }
 }
