@@ -6,14 +6,17 @@
 package top.birthcat.journalmod.server;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ServerboundEditBookPacket;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import top.birthcat.journalmod.common.JournalDataPacket;
+
+import java.util.Optional;
 
 import static top.birthcat.journalmod.common.AttachmentTypes.ATT_JOURNAL;
 
@@ -27,18 +30,12 @@ public class AttachmentSyncHandler {
         var player = e.getEntity();
         if (player instanceof ServerPlayer sPlayer) {
             var sidePages = player.getData(ATT_JOURNAL);
-            PacketDistributor.sendToPlayer(sPlayer, new JournalDataPacket(sidePages, new CompoundTag(),-1));
+            PacketDistributor.sendToPlayer(sPlayer, new JournalDataPacket(sidePages,-1));
         }
     }
 
     public static void syncOnEdit(JournalDataPacket packet, IPayloadContext ctx) {
         ctx.player().setData(ATT_JOURNAL, packet.pages());
-        if(packet.stackData()!=EMPTY && packet.slot()!=-1){
-            try {
-                ctx.player().inventoryMenu.setItem(packet.slot(), 0,ItemStack.parseOptional(ctx.player().level().registryAccess(),packet.stackData()));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        if(packet.slot()!=-1) ctx.connection().send(new ServerboundEditBookPacket(packet.slot(),packet.pages(), Optional.of(Component.translatable("book.journalmod.transcription").getString())));
     }
 }
