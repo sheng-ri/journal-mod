@@ -14,8 +14,8 @@ import top.birthcat.journalmod.JournalMod;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static top.birthcat.journalmod.common.JournalDataPacket.MAX_LEN_PER_PAGE;
-import static top.birthcat.journalmod.common.JournalDataPacket.MAX_PAGES;
+import static net.minecraft.world.item.component.WritableBookContent.MAX_PAGES;
+import static net.minecraft.world.item.component.WritableBookContent.PAGE_EDIT_LENGTH;
 
 public class AttachmentTypes {
 
@@ -25,7 +25,7 @@ public class AttachmentTypes {
     public static final Supplier<AttachmentType<List<String>>> ATT_JOURNAL =
             MOD_ATTACHMENT_TYPES.register(
                     "journal", () -> AttachmentType.builder(() -> List.<String>of())
-                            .serialize(Codec.list(Codec.string(0, MAX_LEN_PER_PAGE), 0, MAX_PAGES))
+                            .serialize(Codec.list(Codec.string(0, PAGE_EDIT_LENGTH), 0, MAX_PAGES))
                             .copyOnDeath()
                             .build()
             );
