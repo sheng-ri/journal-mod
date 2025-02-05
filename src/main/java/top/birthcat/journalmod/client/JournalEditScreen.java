@@ -164,7 +164,7 @@ public class JournalEditScreen extends Screen {
             this.minecraft.setScreen(null);
             this.saveChanges();
         }).bounds(this.width / 2 + 2, 196, 98, 20).build());
-        this.writeButton = this.addRenderableWidget(Button.builder(Component.translatable("book.journalmod.transcription"), p_98177_ -> {
+        this.writeButton = this.addRenderableWidget(Button.builder(Component.translatable("book.journalmod.transcribe"), p_98177_ -> {
             this.minecraft.setScreen(null);
             this.saveChanges();
             this.writeToBook();
