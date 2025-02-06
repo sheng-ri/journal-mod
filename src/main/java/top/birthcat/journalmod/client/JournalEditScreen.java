@@ -85,7 +85,6 @@ public class JournalEditScreen extends Screen {
     private DisplayCache displayCache = DisplayCache.EMPTY;
     private Component pageMsg = CommonComponents.EMPTY;
     private final ItemStack book;
-    private int slot = -1;
     private final Player owner;
 
     public JournalEditScreen(Player owner, List<String> pages) {
@@ -95,13 +94,11 @@ public class JournalEditScreen extends Screen {
         var writablebookcontent = mainHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
         if (writablebookcontent != null) {
             this.book = mainHandItem ;
-            this.slot = owner.getInventory().selected;
         } else {
             var offHandItem = owner.getItemInHand(InteractionHand.OFF_HAND);
             writablebookcontent = offHandItem.get(DataComponents.WRITABLE_BOOK_CONTENT);
             if (writablebookcontent != null) {
                 this.book = offHandItem ;
-                this.slot = 40;
             } else {
                 this.book = null;
             }
@@ -196,7 +193,7 @@ public class JournalEditScreen extends Screen {
     private void saveChanges() {
         if (this.isModified) {
             this.eraseEmptyTrailingPages();
-            ClientJournalHolder.setJournal(pages,this.slot);
+            ClientJournalHolder.setJournal(pages,this.owner.getMainHandItem().has(DataComponents.WRITABLE_BOOK_CONTENT)?this.owner.getInventory().selected:(this.owner.getOffhandItem().has(DataComponents.WRITABLE_BOOK_CONTENT)?40:-1));
         }
     }
 
